@@ -1,368 +1,226 @@
-/* ====== KONFIG ====== */
-const RESET_PASSWORD = "agus123"; // ganti sesuai keinginan Cak
-const GAME_TIME = 60;             // detik
-const GRID_SIZE = 10;
-
-/* ====== LIBRARY KATA ====== */
-const WORD_LIBRARY = [
-  "MATEMATIKA","BIOLOGI","FISIKA","KIMIA","SEJARAH","GEOGRAFI","EKONOMI","SOSIOLOGI","FILSAFAT","PSIKOLOGI",
-  "KOMPUTER","INTERNET","ROBOT","MESIN","BUDAYA","SENI","MUSIK","PUISI","BAHASA","PENGETAHUAN",
-  "GURU","MURID","SEKOLAH","KELAS","UJIAN","TUGAS","BELAJAR","CERDAS","DISIPLIN","KREATIF",
-  "INDONESIA","MERDEKA","PANCASILA","GARUDA","JAKARTA","BANDUNG","SURABAYA","BOROBUDUR","KARTINI","SOEKARNO",
-  "OLAHRAGA","SEPAKBOLA","BULUTANGKIS","VOLI","RENANG","ATLET","OLAHRAGAWAN","EMAS","JUARA","PRESTASI"
+const wordsLibrary = [
+  "GURU","SEKOLAH","BELAJAR","MURID","BUKU",
+  "PENA","KELAS","ILMU","UJIAN","CERDAS"
 ];
 
-/* ====== STATE ====== */
-let playerName = "";
-let wordsToFind = [];
+let gridSize = 10;
 let grid = [];
 let selectedCells = [];
-let isSelecting = false;
-let timeLeft = GAME_TIME;
-let timerInterval = null;
+let foundWords = [];
+let timerInterval;
+let timeLeft = 60;
+let playerName = "";
 
-/* ====== DOM ====== */
-const elHome = document.getElementById("home");
-const elGame = document.getElementById("game");
-const elGrid = document.getElementById("grid");
-const elWordList = document.getElementById("wordList");
-const elTimer = document.getElementById("timer");
-const elPlayer = document.getElementById("player");
-const elLeaderboard = document.getElementById("leaderboard");
-const startBtn = document.getElementById("startBtn");
-const resetBtn = document.getElementById("resetBtn");
-const nameInput = document.getElementById("playerName");
+const startBtn = document.getElementById("startGame");
+const playerInput = document.getElementById("playerName");
+const home = document.getElementById("home");
+const game = document.getElementById("game");
+const gridEl = document.getElementById("grid");
+const wordListEl = document.getElementById("word-list");
+const timerEl = document.getElementById("timer");
+const leaderboardEl = document.getElementById("leaderboard");
+const resetBtn = document.getElementById("resetLeaderboard");
 
-/* ====== INIT ====== */
-document.addEventListener("DOMContentLoaded", () => {
-  // Tombol mulai & reset pakai event listener (tidak inline) agar pasti terpasang
-  startBtn.addEventListener("click", startGame);
-  resetBtn.addEventListener("click", resetLeaderboard);
-  renderLeaderboard();
+const startSound = new Audio("data:audio/mp3;base64,//uQxAAAA..."); // start
+const successSound = new Audio("data:audio/mp3;base64,//uQxAAAA..."); // kata benar
+const gameOverSound = new Audio("data:audio/mp3;base64,//uQxAAAA..."); // game over
+const cheerSound = new Audio("data:audio/mp3;base64,//uQxAAAA..."); // sorak panjang
 
-  // End selection jika pointer diangkat di mana pun
-  document.addEventListener("pointerup", endSelectionGlobal);
+// --- Leaderboard
+function loadLeaderboard() {
+  const data = JSON.parse(localStorage.getItem("leaderboard") || "[]");
+  leaderboardEl.innerHTML = "";
+  data.sort((a,b)=>b.score-a.score).forEach((item,i)=>{
+    const li = document.createElement("li");
+    li.textContent = `${i+1}. ${item.name} - ${item.score}`;
+    leaderboardEl.appendChild(li);
+  });
+}
+
+resetBtn.addEventListener("click", () => {
+  const pass = prompt("Masukkan password reset:");
+  if (pass === "Reset@12345") {
+    localStorage.removeItem("leaderboard");
+    loadLeaderboard();
+    alert("Leaderboard berhasil direset!");
+  } else {
+    alert("Password salah!");
+  }
 });
 
-/* ====== LEADERBOARD ====== */
-function renderLeaderboard(){
-  const scores = JSON.parse(localStorage.getItem("leaderboard")||"[]");
-  elLeaderboard.innerHTML = "";
-  // Pakai <ol> -> nomor otomatis, jadi li tidak pakai nomor manual
-  scores.forEach(s=>{
-    const li = document.createElement("li");
-    li.innerHTML = `<span>${s.name}</span><span>${s.score}</span>`;
-    elLeaderboard.appendChild(li);
+// --- Build Grid
+function buildGrid(words) {
+  grid = Array.from({length:gridSize},()=>Array(gridSize).fill(""));
+  words.forEach(word=>{
+    let placed = false;
+    while(!placed) {
+      const row = Math.floor(Math.random()*gridSize);
+      const col = Math.floor(Math.random()*gridSize);
+      if (col+word.length <= gridSize) {
+        let fits = true;
+        for (let i=0;i<word.length;i++){
+          if(grid[row][col+i] && grid[row][col+i]!==word[i]){fits=false;break;}
+        }
+        if (fits){
+          for (let i=0;i<word.length;i++) grid[row][col+i]=word[i];
+          placed=true;
+        }
+      }
+    }
   });
-}
-
-function saveScore(scoreValue){
-  let scores = JSON.parse(localStorage.getItem("leaderboard")||"[]");
-  scores.push({ name: playerName, score: scoreValue });
-  scores.sort((a,b)=> b.score - a.score);
-  scores = scores.slice(0,10);
-  localStorage.setItem("leaderboard", JSON.stringify(scores));
-}
-
-function resetLeaderboard(){
-  const pass = prompt("Masukkan password reset leaderboard:");
-  if(pass === null) return;
-  if(pass === RESET_PASSWORD){
-    localStorage.removeItem("leaderboard");
-    alert("Leaderboard berhasil direset.");
-    renderLeaderboard();
-  }else{
-    alert("Password salah.");
-  }
-}
-
-/* ====== GAME FLOW ====== */
-function startGame(){
-  playerName = nameInput.value.trim();
-  if(!playerName){
-    alert("Masukkan nama dulu ya.");
-    nameInput.focus();
-    return;
-  }
-
-  wordsToFind = shuffle(WORD_LIBRARY).slice(0,10);
-
-  elHome.classList.add("hidden");
-  elGame.classList.remove("hidden");
-  elPlayer.textContent = "👤 " + playerName;
-
-  timeLeft = GAME_TIME;
-  updateTimerLabel();
-
-  generateGrid();
-  renderWordList();
-  attachGridPointerEvents();
-
-  playStartSound();
-  startTimer();
-}
-
-function showHome(){
-  elGame.classList.add("hidden");
-  elHome.classList.remove("hidden");
-  renderLeaderboard();
-}
-
-/* ====== TIMER ====== */
-function startTimer(){
-  clearInterval(timerInterval);
-  timerInterval = setInterval(()=>{
-    timeLeft--;
-    updateTimerLabel();
-    if(timeLeft <= 0){
-      clearInterval(timerInterval);
-      gameOver(false);
-    }
-  },1000);
-}
-function updateTimerLabel(){
-  elTimer.textContent = "⏱️ " + timeLeft;
-}
-
-/* ====== GRID GENERATION ====== */
-function generateGrid(){
-  const N = GRID_SIZE;
-  grid = Array.from({length:N}, ()=> Array(N).fill(""));
-
-  // tanam kata (H/V)
-  wordsToFind.forEach(word => placeWordHV(word));
-
-  // isi kosong dengan huruf acak
-  const letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
-  for(let r=0;r<N;r++){
-    for(let c=0;c<N;c++){
-      if(grid[r][c]===""){
-        grid[r][c] = letters[Math.floor(Math.random()*letters.length)];
-      }
-    }
-  }
-  renderGrid();
-}
-
-function placeWordHV(word){
-  const N = GRID_SIZE;
-  let placed = false, guard=0;
-  while(!placed && guard<500){
-    guard++;
-    const dir = Math.random()<0.5 ? "H":"V";
-    const row = Math.floor(Math.random()*N);
-    const col = Math.floor(Math.random()*N);
-    if(dir==="H" && col+word.length<=N){
-      // cek kosong
-      let ok = true;
-      for(let i=0;i<word.length;i++){
-        if(grid[row][col+i] !== "") { ok=false; break; }
-      }
-      if(ok){
-        for(let i=0;i<word.length;i++) grid[row][col+i] = word[i];
-        placed = true;
-      }
-    }else if(dir==="V" && row+word.length<=N){
-      let ok = true;
-      for(let i=0;i<word.length;i++){
-        if(grid[row+i][col] !== "") { ok=false; break; }
-      }
-      if(ok){
-        for(let i=0;i<word.length;i++) grid[row+i][col] = word[i];
-        placed = true;
-      }
+  const alphabet="ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+  for(let r=0;r<gridSize;r++){
+    for(let c=0;c<gridSize;c++){
+      if(!grid[r][c]) grid[r][c]=alphabet[Math.floor(Math.random()*alphabet.length)];
     }
   }
 }
 
+// --- Render Grid
 function renderGrid(){
-  elGrid.innerHTML = "";
-  const N = GRID_SIZE;
-  for(let r=0;r<N;r++){
-    for(let c=0;c<N;c++){
-      const cell = document.createElement("div");
-      cell.className = "cell";
-      cell.textContent = grid[r][c];
-      cell.dataset.row = r;
-      cell.dataset.col = c;
-      elGrid.appendChild(cell);
+  gridEl.innerHTML="";
+  for(let r=0;r<gridSize;r++){
+    for(let c=0;c<gridSize;c++){
+      const div=document.createElement("div");
+      div.className="cell";
+      div.dataset.row=r;
+      div.dataset.col=c;
+      div.textContent=grid[r][c];
+      div.addEventListener("mousedown",startSwipe);
+      div.addEventListener("mouseover",swipeOver);
+      div.addEventListener("mouseup",endSwipe);
+
+      div.addEventListener("touchstart",startSwipe,{passive:true});
+      div.addEventListener("touchmove",swipeTouch,{passive:true});
+      div.addEventListener("touchend",endSwipe);
+      gridEl.appendChild(div);
     }
   }
 }
 
-/* ====== WORD LIST ====== */
-function renderWordList(){
-  elWordList.innerHTML = "";
-  wordsToFind.forEach(w=>{
-    const li = document.createElement("li");
-    li.id = "word-"+w;
-    li.textContent = w;
-    elWordList.appendChild(li);
-  });
+// --- Swipe system
+let isSwiping = false;
+
+function startSwipe(e){
+  isSwiping = true;
+  clearSelection();
+  selectCell(e.target);
 }
 
-/* ====== SELECTION (SWIPE/DRAG) ====== */
-function attachGridPointerEvents(){
-  // Pakai Pointer Events biar mulus di desktop & HP
-  elGrid.querySelectorAll(".cell").forEach(cell=>{
-    cell.addEventListener("pointerdown", onPointerDown);
-    cell.addEventListener("pointerenter", onPointerEnter);
-  });
+function swipeOver(e){
+  if(isSwiping) selectCell(e.target);
 }
 
-function onPointerDown(e){
-  e.preventDefault();
-  isSelecting = true;
-  selectedCells = [];
-  toggleCell(e.currentTarget);
+function swipeTouch(e){
+  const touch = e.touches[0];
+  const elem = document.elementFromPoint(touch.clientX, touch.clientY);
+  if(elem && elem.classList.contains("cell")) selectCell(elem);
 }
 
-function onPointerEnter(e){
-  if(!isSelecting) return;
-  toggleCell(e.currentTarget);
-}
-
-function endSelectionGlobal(){
-  if(!isSelecting) return;
-  isSelecting = false;
-  checkSelection();
-}
-
-function toggleCell(cellEl){
-  if(!cellEl.classList.contains("cell")) return;
-  if(cellEl.classList.contains("selected")){
-    // boleh batal pilih dengan lewat lagi
-    cellEl.classList.remove("selected");
-    selectedCells = selectedCells.filter(n => n !== cellEl);
-  }else{
-    cellEl.classList.add("selected");
-    selectedCells.push(cellEl);
+function endSwipe(){
+  if(isSwiping){
+    checkWord();
+    isSwiping = false;
   }
 }
 
-function checkSelection(){
-  const word = selectedCells.map(c=>c.textContent).join("");
-  const reversed = [...word].reverse().join("");
-  const match = wordsToFind.includes(word) ? word :
-                (wordsToFind.includes(reversed) ? reversed : null);
-
-  if(match){
-    // tandai di grid & daftar
-    selectedCells.forEach(c=>{
-      c.classList.remove("selected");
-      c.classList.add("found");
-    });
-    const li = document.getElementById("word-"+match);
-    if(li) li.classList.add("found");
-
-    playFoundSound();
-
-    // selesai semua
-    const allDone = [...elWordList.querySelectorAll("li")]
-      .every(li => li.classList.contains("found"));
-    if(allDone){
-      gameOver(true);
-    }
-  }else{
-    // batal
-    selectedCells.forEach(c=>c.classList.remove("selected"));
+function selectCell(cell){
+  if(!selectedCells.includes(cell)){
+    cell.classList.add("selected");
+    selectedCells.push(cell);
   }
+}
+
+function clearSelection(){
+  selectedCells.forEach(c=>c.classList.remove("selected"));
   selectedCells = [];
 }
 
-/* ====== GAME OVER ====== */
-function gameOver(won){
+// --- Check Word
+function checkWord(){
+  const word=selectedCells.map(c=>c.textContent).join("");
+  if(wordsToFind.includes(word) && !foundWords.includes(word)){
+    foundWords.push(word);
+    selectedCells.forEach(c=>{c.classList.add("correct");c.classList.remove("selected");});
+    selectedCells=[];
+    successSound.play();
+    updateWordList();
+    if(foundWords.length===wordsToFind.length) endGame(true);
+  } else {
+    clearSelection();
+  }
+}
+
+function updateWordList(){
+  wordListEl.innerHTML=wordsToFind.map(w=>foundWords.includes(w)?`<s>${w}</s>`:w).join(" | ");
+}
+
+// --- Start Game
+let wordsToFind=[];
+startBtn.addEventListener("click",()=>{
+  playerName=playerInput.value.trim();
+  if(!playerName){alert("Masukkan nama!");return;}
+  home.classList.add("hidden");
+  game.classList.remove("hidden");
+
+  wordsToFind = [...wordsLibrary].sort(()=>0.5-Math.random()).slice(0,5);
+  foundWords=[];
+  buildGrid(wordsToFind);
+  renderGrid();
+  updateWordList();
+
+  timeLeft=60;
+  timerEl.textContent=`Waktu: ${timeLeft}`;
+  startSound.play();
+  timerInterval=setInterval(()=>{
+    timeLeft--;
+    timerEl.textContent=`Waktu: ${timeLeft}`;
+    if(timeLeft<=0) endGame(false);
+  },1000);
+});
+
+// --- End Game
+function endGame(win){
   clearInterval(timerInterval);
-  if(won){
-    // Konfeti + cheer BERSAMAAN
-    launchConfetti();
-    playCheer();
+  game.classList.add("hidden");
+  home.classList.remove("hidden");
+
+  if(win){
+    cheerSound.play();
+    startConfetti();
+    saveScore(playerName,timeLeft*10);
   }else{
-    playGameOverSound();
+    gameOverSound.play();
+    saveScore(playerName,foundWords.length*10);
   }
-  // Skor pakai sisa waktu
-  saveScore(timeLeft);
-  // Kembali ke home
-  setTimeout(showHome, 3500);
+  loadLeaderboard();
 }
 
-/* ====== UTIL ====== */
-function shuffle(arr){ return arr.slice().sort(()=>Math.random()-0.5); }
-
-/* ====== AUDIO (tanpa file eksternal) ====== */
-function beep(freq, durationSec){
-  const ctx = new (window.AudioContext||window.webkitAudioContext)();
-  const osc = ctx.createOscillator();
-  const gain = ctx.createGain();
-  osc.type = "sine";
-  osc.frequency.value = freq;
-  osc.connect(gain);
-  gain.connect(ctx.destination);
-  gain.gain.setValueAtTime(0.12, ctx.currentTime);
-  osc.start();
-  osc.stop(ctx.currentTime + durationSec);
+function saveScore(name,score){
+  let data=JSON.parse(localStorage.getItem("leaderboard")||"[]");
+  data.push({name,score});
+  localStorage.setItem("leaderboard",JSON.stringify(data));
 }
 
-function playStartSound(){
-  // versi awal: nada naik 400 -> 600
-  beep(400, 0.18);
-  setTimeout(()=>beep(600,0.2), 190);
-}
-
-function playFoundSound(){
-  // cepat 800 -> 1000
-  beep(800, 0.1);
-  setTimeout(()=>beep(1000,0.14), 110);
-}
-
-function playGameOverSound(){
-  // versi awal: nada turun 400 -> 200
-  beep(400, 0.28);
-  setTimeout(()=>beep(200,0.35), 300);
-}
-
-function playCheer(){
-  // sorak/tepuk tangan ramai (tanpa file), overlay oscillator
-  const ctx = new (window.AudioContext||window.webkitAudioContext)();
-  const duration = 3.2;
-  const voices = 28;
-
-  for(let i=0;i<voices;i++){
-    const osc = ctx.createOscillator();
-    const gain = ctx.createGain();
-    osc.type = Math.random()>0.5 ? "square" : "sawtooth";
-    osc.frequency.setValueAtTime(220 + Math.random()*900, ctx.currentTime);
-    gain.gain.setValueAtTime(0.025, ctx.currentTime);
-    const start = ctx.currentTime + Math.random()*0.25;
-    const end   = start + duration - Math.random()*1.1;
-    osc.connect(gain).connect(ctx.destination);
-    osc.start(start);
-    osc.stop(end);
-  }
-}
-
-/* ====== CONFETTI ====== */
-function launchConfetti(){
-  // pakai canvas-confetti (CDN sudah di index.php)
-  const duration = 2200;
-  const end = Date.now() + duration;
-
+// --- Confetti
+function startConfetti(){
+  const duration=5*1000;
+  const end=Date.now()+duration;
+  const colors=["#bb0000","#ffffff","#00bb00","#0000bb"];
   (function frame(){
-    // 2 letupan per frame (kiri & kanan)
-    confetti({
-      particleCount: 40,
-      startVelocity: 30,
-      spread: 55,
-      origin: { x: 0.15, y: 0.2 }
-    });
-    confetti({
-      particleCount: 40,
-      startVelocity: 30,
-      spread: 55,
-      origin: { x: 0.85, y: 0.2 }
-    });
-    if(Date.now() < end){
-      requestAnimationFrame(frame);
+    const timeLeft=end-Date.now();
+    if(timeLeft<=0) return;
+    const canvas=document.getElementById("confetti-canvas");
+    const ctx=canvas.getContext("2d");
+    canvas.width=window.innerWidth;
+    canvas.height=window.innerHeight;
+    ctx.clearRect(0,0,canvas.width,canvas.height);
+    for(let i=0;i<100;i++){
+      ctx.fillStyle=colors[Math.floor(Math.random()*colors.length)];
+      ctx.fillRect(Math.random()*canvas.width,Math.random()*canvas.height,5,10);
     }
+    requestAnimationFrame(frame);
   })();
 }
+
+loadLeaderboard();
