@@ -1,45 +1,39 @@
 <!DOCTYPE html>
 <html lang="id">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1.0" />
-  <title>Mencari Kata</title>
-  <link rel="stylesheet" href="style.css" />
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Word Search Game</title>
+  <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <div id="home">
-    <h1>Mencari Kata</h1>
+  <div class="container" id="home">
+    <h1>Word Search Game</h1>
 
-    <div class="controls">
-      <input type="text" id="playerName" placeholder="Masukkan Nama" />
-      <button id="startBtn">Mulai Game</button>
-    </div>
-
-    <div class="lb-header">
+    <div id="leaderboard-section">
       <h2>Leaderboard</h2>
-      <button id="resetBtn" class="danger">Reset Leaderboard</button>
+      <ol id="leaderboard"></ol>
+      <button id="resetLeaderboard">Reset Leaderboard</button>
     </div>
-    <ol id="leaderboard"></ol>
+
+    <div id="name-section">
+      <input type="text" id="playerName" placeholder="Masukkan Nama">
+      <button id="startGame">Mulai Game</button>
+    </div>
   </div>
 
-  <div id="game" class="hidden">
-    <div id="hud">
-      <span id="timer">⏱️ 60</span>
-      <span id="player"></span>
-    </div>
-
-    <div id="grid"></div>
-
-    <h3>Kata yang dicari:</h3>
-    <ul id="wordList"></ul>
+  <div class="container hidden" id="game">
+    <h2 id="timer">Waktu: 60</h2>
+    <div id="word-list"></div>
+    <div id="grid" class="grid"></div>
   </div>
 
   <footer>
     © 2025 dibuat dengan ❤️ oleh Agus Widodo FN.
   </footer>
 
-  <!-- CDN konfeti -->
-  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+  <canvas id="confetti-canvas"></canvas>
+
   <script src="script.js"></script>
 </body>
 </html>
