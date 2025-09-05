@@ -7,35 +7,31 @@
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <div class="container" id="menu">
+  <div id="home">
     <h1>Cari Kata</h1>
     <input type="text" id="playerName" placeholder="Masukkan Nama">
-    <button id="startBtn">Mulai Game</button>
+    <button onclick="startGame()">Mulai Game</button>
 
-    <h2>🏆 Leaderboard</h2>
+    <h2>🏆Leaderboard🏆</h2>
     <ol id="leaderboard"></ol>
   </div>
 
-  <div class="container" id="game" style="display:none;">
-    <h1>Mencari Kata</h1>
-    <div class="info">
-      <span id="infoName"></span> |
-      <span id="infoTime"></span> |
-      <span id="infoScore"></span>
+  <div id="game" class="hidden">
+    <div id="hud">
+      <span id="timer">⏱️ 60</span>
+      <span id="player"></span>
     </div>
-
-    <div id="wordList"></div>
     <div id="grid"></div>
+    <h3>Kata yang dicari:</h3>
+    <ul id="wordList"></ul>
   </div>
 
-  <!-- Canvas untuk konfeti -->
-  <canvas id="confetti"></canvas>
-
-  <!-- Footer -->
   <footer>
     © 2025 dibuat dengan ❤️ oleh Agus Widodo FN.
   </footer>
 
+  <!-- CDN untuk konfeti -->
+  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
   <script src="script.js"></script>
 </body>
 </html>
