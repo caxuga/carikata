@@ -7,25 +7,31 @@
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <div id="home">
+  <div class="container" id="menu">
     <h1>Mencari Kata</h1>
     <input type="text" id="playerName" placeholder="Masukkan Nama">
-    <button onclick="startGame()">Mulai Game</button>
+    <button id="startBtn">Mulai Game</button>
 
-    <h2>Leaderboard</h2>
+    <h2>🏆 Leaderboard</h2>
     <ol id="leaderboard"></ol>
   </div>
 
-  <div id="game" class="hidden">
-    <div id="hud">
-      <span id="timer">⏱️ 60</span>
-      <span id="player"></span>
+  <div class="container" id="game" style="display:none;">
+    <h1>Mencari Kata</h1>
+    <div class="info">
+      <span id="infoName"></span> |
+      <span id="infoTime"></span> |
+      <span id="infoScore"></span>
     </div>
+
+    <div id="wordList"></div>
     <div id="grid"></div>
-    <h3>Kata yang dicari:</h3>
-    <ul id="wordList"></ul>
   </div>
 
+  <!-- Canvas untuk konfeti -->
+  <canvas id="confetti"></canvas>
+
+  <!-- Footer -->
   <footer>
     © 2025 dibuat dengan ❤️ oleh Agus Widodo FN.
   </footer>
