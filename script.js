@@ -1,4 +1,4 @@
-// ===== Library Kata (50 kata acak) =====
+// ===== LIBRARY KATA =====
 const wordLibrary = [
   "MATEMATIKA","BIOLOGI","FISIKA","KIMIA","SEJARAH","GEOGRAFI","EKONOMI","SOSIOLOGI","FILSAFAT","PSIKOLOGI",
   "KOMPUTER","INTERNET","ROBOT","MESIN","BUDAYA","SENI","MUSIK","PUISI","BAHASA","PENGETAHUAN",
@@ -23,9 +23,7 @@ function startGame() {
     return;
   }
 
-  // pilih 10 kata acak
   wordsToFind = shuffleArray(wordLibrary).slice(0, 10);
-  
   document.getElementById("home").classList.add("hidden");
   document.getElementById("game").classList.remove("hidden");
   document.getElementById("player").textContent = "👤 " + playerName;
@@ -40,12 +38,8 @@ function startGame() {
 function generateGrid() {
   grid = Array.from({ length: gridSize }, () => Array(gridSize).fill(""));
 
-  // tanam kata
-  wordsToFind.forEach(word => {
-    placeWord(word);
-  });
+  wordsToFind.forEach(word => placeWord(word));
 
-  // isi sisa dengan huruf random
   let letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
   for (let r = 0; r < gridSize; r++) {
     for (let c = 0; c < gridSize; c++) {
@@ -142,7 +136,7 @@ function toggleCell(cell) {
 function checkSelection() {
   let word = selectedCells.map(c => c.textContent).join("");
   let reversed = word.split("").reverse().join("");
-  
+
   if (wordsToFind.includes(word) || wordsToFind.includes(reversed)) {
     selectedCells.forEach(c => {
       c.classList.remove("selected");
@@ -151,7 +145,6 @@ function checkSelection() {
     document.getElementById("word-" + (wordsToFind.includes(word) ? word : reversed)).classList.add("found");
     playFoundSound();
 
-    // cek apakah semua selesai
     if ([...document.querySelectorAll("#wordList li")].every(li => li.classList.contains("found"))) {
       gameOver(true);
     }
@@ -207,9 +200,9 @@ function renderLeaderboard() {
   let scores = JSON.parse(localStorage.getItem("leaderboard")) || [];
   let lb = document.getElementById("leaderboard");
   lb.innerHTML = "";
-  scores.forEach((s, i) => {
+  scores.forEach(s => {
     let li = document.createElement("li");
-    li.textContent = (i + 1) + ". " + s.name + " - " + s.score;
+    li.textContent = s.name + " - " + s.score;
     lb.appendChild(li);
   });
 }
@@ -221,17 +214,14 @@ function shuffleArray(arr) {
 
 // ===== SUARA =====
 function playStartSound() {
-  beep(400, 0.2); beep(600, 0.2);
+  beep(400, 0.2); setTimeout(()=>beep(600,0.2),200);
 }
-
 function playFoundSound() {
-  beep(800, 0.1); beep(1000, 0.15);
+  beep(800, 0.1); setTimeout(()=>beep(1000,0.15),100);
 }
-
 function playGameOverSound() {
-  beep(200, 0.4); beep(150, 0.4);
+  beep(400, 0.3); setTimeout(()=>beep(200,0.4),300);
 }
-
 function beep(freq, duration) {
   const ctx = new (window.AudioContext || window.webkitAudioContext)();
   const osc = ctx.createOscillator();
@@ -278,6 +268,9 @@ function launchConfetti() {
     const timeLeft = animationEnd - Date.now();
     if (timeLeft <= 0) return clearInterval(interval);
     const particleCount = 50 * (timeLeft / duration);
-    confetti(Object.assign({}, defaults, { particleCount, origin: { x: randomInRange(0, 1), y: Math.random() - 0.2 } }));
+    confetti(Object.assign({}, defaults, {
+      particleCount,
+      origin: { x: randomInRange(0, 1), y: Math.random() - 0.2 }
+    }));
   }, 250);
 }
